@@ -49,8 +49,8 @@ def upload_audio():
         audio_split = AudioSplit(
             audio_file=file_path,
             segments=audio_segments,
-            sentence_end_fix=0.2,
-            word_end_fix=0.1
+            sentence_end_fix=0.1,
+            word_end_fix=0.05
         )
         
         audio_split_output_dir_path = os.path.join(OUTPUT_FOLDER, f"{filename}")
