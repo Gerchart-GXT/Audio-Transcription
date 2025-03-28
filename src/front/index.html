@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+
+        .upload-container {
+            border: 2px dashed #bdc3c7;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .upload-container.dragover {
+            border-color: #3498db;
+            background-color: rgba(52, 152, 219, 0.05);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.1);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-btn {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 15px;
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .upload-btn:hover {
+            background-color: #2980b9;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 20px;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background-color: #2ecc71;
+            border-radius: 10px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            line-height: 20px;
+            font-size: 12px;
+            color: #fff;
+            text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .results-container {
+            margin-top: 30px;
+            display: none;
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .display-toggle {
+            margin-bottom: 20px;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .sentence {
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-left: 4px solid #3498db;
+        }
+
+        .sentence:hover {
+            background-color: #eef2f7;
+            transform: translateX(3px);
+        }
+
+        .sentence-controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .sentence-controls button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            background-color: #3498db;
+            color: white;
+        }
+
+        .sentence-controls button:hover {
+            background-color: #2980b9;
+        }
+
+        .sentence-controls .play-btn {
+            background-color: #2ecc71;
+        }
+
+        .sentence-controls .play-btn:hover {
+            background-color: #27ae60;
+        }
+
+        .sentence-controls .expand-btn {
+            background-color: #e67e22;
+        }
+
+        .sentence-controls .expand-btn:hover {
+            background-color: #d35400;
+        }
+
+
+        /* 修改上传按钮为绿色 */
+        #uploadBtn {
+            background-color: #2ecc71;
+            /* 绿色 */
+        }
+
+        #uploadBtn:hover {
+            background-color: #27ae60;
+            /* 深绿色 */
+        }
+
+        /* 修改重置按钮为红色 */
+        #resetBtn {
+            background-color: #e74c3c;
+            /* 红色 */
+        }
+
+        #resetBtn:hover {
+            background-color: #c0392b;
+            /* 深红色 */
+        }
+
+        .sentence-details {
+            display: none;
+            padding: 15px;
+            border-left: 3px solid #3498db;
+            margin-top: 10px;
+            background-color: #f1f7ff;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .word {
+            display: inline-block;
+            margin-right: 5px;
+            padding: 3px 5px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+        }
+
+        .word:hover {
+            background-color: #F5C836;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .loading::after {
+            content: "";
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: #e74c3c;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: rgba(231, 76, 60, 0.1);
+            display: none;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .success {
+            color: #27ae60;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: rgba(39, 174, 96, 0.1);
+            display: none;
+            border-left: 4px solid #27ae60;
+        }
+
+        .audio-controls {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .audio-playing {
+            background-color: #e1f0fa !important;
+            transform: scale(1.02);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .processed-files-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        #processedFilesList {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #processedFilesList li {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #processedFilesList li:hover {
+            background-color: #e9ecef;
+        }
+
+        #refreshProcessedFilesBtn {
+            background-color: #3498db;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        #refreshProcessedFilesBtn:hover {
+            background-color: #2980b9;
+        }
+
+        #clearTempBtn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        #clearTempBtn:hover {
+            background-color: #c0392b;
+        }
+
+        .delete-btn {
+            background-color: #e74c3c;
+            color: white;
+            padding: 3px 6px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        .audio-player {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .audio-player button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .audio-player button:hover {
+            background-color: #2980b9;
+        }
+
+        .audio-progress {
+            flex-grow: 1;
+            height: 5px;
+            background-color: #ecf0f1;
+            border-radius: 2.5px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .audio-progress-bar {
+            height: 100%;
+            background-color: #2ecc71;
+            border-radius: 2.5px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .audio-time {
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Audio Transcription App</h1>
+    <div class="upload-container" id="dropArea">
+        <p>Drag & drop your audio file here or</p>
+        <input type="file" id="fileInput" class="file-input" accept="audio/*">
+        <button class="upload-btn" id="selectFileBtn">Select File</button>
+        <p id="fileName"></p>
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+            <div class="progress-text" id="progressText">0%</div>
+        </div>
+        <div class="upload-controls">
+            <button class="upload-btn" id="uploadBtn">Upload</button>
+            <button class="upload-btn" id="resetBtn">Reset</button>
+        </div>
+    </div>
+    <div class="success" id="successMessage"></div>
+    <div class="error" id="errorMessage"></div>
+    <div class="loading" id="loading">
+        Processing your audio file... This may take a few minutes depending on the file size.
+    </div>
+    <div class="processed-files-container" id="processedFilesContainer">
+        <h2>Previously Processed Files</h2>
+        <button id="refreshProcessedFilesBtn">Refresh List</button>
+        <button id="clearTempBtn">Clear Temp Cache</button>
+        <ul id="processedFilesList"></ul>
+    </div>
+    <div class="results-container" id="resultsContainer">
+        <div class="display-toggle">
+            <div class="audio-player" id="originalAudioPlayer">
+                <button id="playPauseOriginalAudioBtn">Play</button>
+                <div class="audio-progress" id="originalAudioProgress">
+                    <div class="audio-progress-bar" id="originalAudioProgressBar"></div>
+                </div>
+                <div class="audio-time" id="originalAudioTime">0:00 / 0:00</div>
+            </div>
+        </div>
+        <div id="sentencesContainer"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const API_BASE_URL = 'http://127.0.0.1:5000';
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const selectFileBtn = document.getElementById('selectFileBtn');
+            const uploadBtn = document.getElementById('uploadBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const fileName = document.getElementById('fileName');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const sentencesContainer = document.getElementById('sentencesContainer');
+            const processedFilesList = document.getElementById('processedFilesList');
+            const refreshProcessedFilesBtn = document.getElementById('refreshProcessedFilesBtn');
+            const clearTempBtn = document.getElementById('clearTempBtn');
+            const playPauseOriginalAudioBtn = document.getElementById('playPauseOriginalAudioBtn');
+            const originalAudioProgress = document.getElementById('originalAudioProgress');
+            const originalAudioProgressBar = document.getElementById('originalAudioProgressBar');
+            const originalAudioTime = document.getElementById('originalAudioTime');
+            let currentAudio = null;
+            let currentOutputDir = null;
+            let activeElement = null;
+            let originalAudio = null;
+            let selectedFile = null;
+
+            // 选择文件按钮
+            selectFileBtn.addEventListener('click', function () {
+                fileInput.click();
+            });
+
+            // 上传按钮
+            uploadBtn.addEventListener('click', function () {
+                if (selectedFile) {
+                    uploadFile(selectedFile);
+                } else {
+                    showError('Please select a file first.');
+                }
+            });
+
+            // 重置按钮
+            resetBtn.addEventListener('click', function () {
+                resetUI();
+            });
+            refreshProcessedFilesBtn.addEventListener('click', function () {
+                getProcessedFiles();
+            });
+            playPauseOriginalAudioBtn.addEventListener('click', function () {
+                if (!originalAudio) {
+                    originalAudio = new Audio(`${API_BASE_URL}/get-original-audio/${currentOutputDir}`);
+                    originalAudio.addEventListener('play', function () {
+                        playPauseOriginalAudioBtn.textContent = 'Pause';
+                    });
+                    originalAudio.addEventListener('pause', function () {
+                        playPauseOriginalAudioBtn.textContent = 'Play';
+                    });
+                    originalAudio.addEventListener('timeupdate', function () {
+                        const progress = (originalAudio.currentTime / originalAudio.duration) * 100;
+                        originalAudioProgressBar.style.width = progress + '%';
+                        originalAudioTime.textContent = `${formatTime(originalAudio.currentTime)} / ${formatTime(originalAudio.duration)}`;
+                    });
+                    originalAudio.addEventListener('ended', function () {
+                        playPauseOriginalAudioBtn.textContent = 'Play';
+                        originalAudioProgressBar.style.width = '0%';
+                        originalAudioTime.textContent = `0:00 / ${formatTime(originalAudio.duration)}`;
+                    });
+                    originalAudioProgress.addEventListener('click', function (e) {
+                        const rect = this.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const width = rect.width;
+                        const seekTime = (clickX / width) * originalAudio.duration;
+                        originalAudio.currentTime = seekTime;
+                    });
+                }
+                if (originalAudio.paused) {
+                    originalAudio.play();
+                } else {
+                    originalAudio.pause();
+                }
+            });
+            // Event listeners for drag and drop
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+            function highlight() {
+                dropArea.classList.add('dragover');
+            }
+            function unhighlight() {
+                dropArea.classList.remove('dragover');
+            }
+            dropArea.addEventListener('drop', handleDrop, false);
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const file = dt.files[0];
+                selectedFile = dt.files[0];
+                handleFile(selectedFile);
+            }
+
+            fileInput.addEventListener('change', function () {
+                if (fileInput.files.length > 0) {
+                    selectedFile = fileInput.files[0];
+                    handleFile(fileInput.files[0]);
+                }
+            });
+            function handleFile(file) {
+                if (file.type.startsWith('audio/')) {
+                    fileName.textContent = `Selected file: ${file.name} (${formatFileSize(file.size)})`;
+                } else {
+                    showError('Please select an audio file (mp3, wav, etc).');
+                }
+            }
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+                else return (bytes / 1073741824).toFixed(1) + ' GB';
+            }
+            function uploadFile(file) {
+                const formData = new FormData();
+                formData.append('file', file);
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE_URL}/upload`, true);
+                xhr.upload.onprogress = function (e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = Math.round((e.loaded / e.total) * 100);
+                        progressContainer.style.display = 'block';
+                        progressBar.style.width = percentComplete + '%';
+                        progressText.textContent = percentComplete + '%';
+                        if (percentComplete === 100) {
+                            progressText.textContent = 'Processing...';
+                        }
+                    }
+                };
+                xhr.onloadstart = function () {
+                    resetUI();
+                    loading.style.display = 'block';
+                    progressContainer.style.display = 'block';
+                };
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            currentOutputDir = response.output_dir.split('/').pop();
+                            showSuccess('File uploaded and processed successfully!');
+                            getResults(currentOutputDir);
+                        } catch (e) {
+                            showError('Invalid response from server.');
+                            loading.style.display = 'none';
+                        }
+                    } else {
+                        let errorMsg = 'Error uploading file';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            errorMsg = response.error || errorMsg;
+                        } catch (e) { }
+                        showError(`${errorMsg} (Status: ${xhr.status})`);
+                        loading.style.display = 'none';
+                    }
+                };
+                xhr.onerror = function () {
+                    showError('Network error occurred during upload. Make sure the server is running at ' + API_BASE_URL);
+                    loading.style.display = 'none';
+                };
+                xhr.ontimeout = function () {
+                    showError('Request timed out. The audio file might be too large or the server is taking too long to process.');
+                    loading.style.display = 'none';
+                };
+                // Set timeout to 10 minutes for large files
+                xhr.timeout = 10 * 60 * 1000;
+                xhr.send(formData);
+            }
+
+            function resetUI() {
+                fileInput.value = ''; // 清空文件选择
+                selectedFile = null; // 清空选择的文件
+                fileName.textContent = ''; // 清空文件名显示
+                progressBar.style.width = '0%'; // 重置进度条
+                progressText.textContent = '0%'; // 重置进度文本
+                progressContainer.style.display = 'none'; // 隐藏进度条
+                loading.style.display = 'none'; // 隐藏加载提示
+                errorMessage.style.display = 'none'; // 隐藏错误消息
+                successMessage.style.display = 'none'; // 隐藏成功消息
+                resultsContainer.style.display = 'none'; // 隐藏结果容器
+                sentencesContainer.innerHTML = ''; // 清空句子容器
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                if (originalAudio) {
+                    originalAudio.pause();
+                    originalAudio = null;
+                    playPauseOriginalAudioBtn.textContent = 'Play';
+                    originalAudioProgressBar.style.width = '0%';
+                    originalAudioTime.textContent = '0:00 / 0:00';
+                }
+            }
+            function getResults(outputDir) {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', `${API_BASE_URL}/results/${outputDir}`, true);
+                xhr.onload = function () {
+                    loading.style.display = 'none';
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            displayResults(response);
+                        } catch (e) {
+                            showError('Invalid response format for results.');
+                        }
+                    } else {
+                        showError('Error retrieving results: ' + xhr.statusText);
+                    }
+                };
+                xhr.onerror = function () {
+                    loading.style.display = 'none';
+                    showError('Network error occurred while retrieving results.');
+                };
+                xhr.send();
+            }
+            function displayResults(data) {
+                resultsContainer.style.display = 'block';
+                sentencesContainer.innerHTML = '';
+                data.sentences.forEach((sentence, index) => {
+                    const sentenceElement = document.createElement('div');
+                    sentenceElement.className = 'sentence';
+                    sentenceElement.dataset.id = index + 1;
+
+                    // 创建句子头部
+                    const sentenceHeader = document.createElement('div');
+                    sentenceHeader.className = 'sentence-header';
+                    sentenceHeader.innerHTML = `<strong>Sentence ${index + 1}</strong>`;
+
+                    // 创建句子内容
+                    const sentenceContent = document.createElement('div');
+                    sentenceContent.className = 'sentence-content';
+                    sentenceContent.textContent = sentence.text; // 显示连贯的句子内容
+                    sentenceContent.style.display = 'none'; // 默认隐藏
+
+                    // 创建控制按钮
+                    const sentenceControls = document.createElement('div');
+                    sentenceControls.className = 'sentence-controls';
+                    const audioPlayer = document.createElement('div');
+                    audioPlayer.className = 'audio-player';
+                    const playPauseBtn = document.createElement('button');
+                    playPauseBtn.textContent = 'Play';
+                    playPauseBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        playSentenceAudio(index + 1, audioPlayer);
+                    });
+                    const progress = document.createElement('div');
+                    progress.className = 'audio-progress';
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'audio-progress-bar';
+                    const time = document.createElement('div');
+                    time.className = 'audio-time';
+                    time.textContent = '0:00 / 0:00';
+                    progress.appendChild(progressBar);
+                    audioPlayer.appendChild(playPauseBtn);
+                    audioPlayer.appendChild(progress);
+                    audioPlayer.appendChild(time);
+                    const expandBtn = document.createElement('button');
+                    expandBtn.className = 'expand-btn';
+                    expandBtn.textContent = 'Expand Words';
+                    expandBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        toggleSentenceDetails(sentenceDetails);
+                    });
+                    sentenceControls.appendChild(audioPlayer);
+                    sentenceControls.appendChild(expandBtn);
+
+                    // 创建句子详情（单词部分）
+                    const sentenceDetails = document.createElement('div');
+                    sentenceDetails.className = 'sentence-details';
+                    sentenceDetails.style.display = 'none'; // 默认隐藏
+
+                    // 查找句子中的单词
+                    const sentenceWords = data.words.filter(word => {
+                        return word.start >= sentence.start && word.end <= sentence.end;
+                    });
+
+                    // 显示单词
+                    sentenceWords.forEach((word, wordIndex) => {
+                        const wordElement = document.createElement('span');
+                        wordElement.className = 'word';
+                        wordElement.textContent = word.text;
+                        wordElement.dataset.sentenceId = index + 1;
+                        wordElement.dataset.wordId = wordIndex + 1;
+                        wordElement.title = `${word.text} (${word.start.toFixed(2)}s - ${word.end.toFixed(2)}s)`;
+                        wordElement.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            playWordAudio(index + 1, wordIndex + 1);
+                        });
+                        sentenceDetails.appendChild(wordElement);
+                        // 在单词之间添加空格
+                        if (wordIndex < sentenceWords.length - 1) {
+                            sentenceDetails.appendChild(document.createTextNode(' '));
+                        }
+                    });
+
+                    // 将头部、内容、控制按钮和详情添加到句子元素
+                    sentenceElement.appendChild(sentenceHeader);
+                    sentenceElement.appendChild(sentenceContent);
+                    sentenceElement.appendChild(sentenceControls);
+                    sentenceElement.appendChild(sentenceDetails);
+
+                    // 点击句子 div 切换显示/隐藏连贯的句子内容
+                    sentenceElement.addEventListener('click', function () {
+                        toggleSentenceContent(sentenceContent);
+                    });
+
+                    // 将句子元素添加到容器
+                    sentencesContainer.appendChild(sentenceElement);
+                });
+            }
+
+            // 切换连贯句子内容的显示/隐藏
+            function toggleSentenceContent(sentenceContent) {
+                if (sentenceContent.style.display === 'block') {
+                    sentenceContent.style.display = 'none';
+                } else {
+                    sentenceContent.style.display = 'block';
+                }
+            }
+
+            // 切换单词的显示/隐藏
+            function toggleSentenceDetails(sentenceDetails) {
+                if (sentenceDetails.style.display === 'block') {
+                    sentenceDetails.style.display = 'none';
+                } else {
+                    sentenceDetails.style.display = 'block';
+                }
+            }
+            function playSentenceAudio(sentenceId, audioPlayer) {
+                const playPauseBtn = audioPlayer.querySelector('button');
+                const progressBar = audioPlayer.querySelector('.audio-progress-bar');
+                const time = audioPlayer.querySelector('.audio-time');
+                let audio = audioPlayer.audio;
+
+                if (!audio) {
+                    audio = new Audio(`${API_BASE_URL}/audio/${currentOutputDir}/sentences/${sentenceId}`);
+                    audioPlayer.audio = audio;
+                    audio.addEventListener('play', function () {
+                        playPauseBtn.textContent = 'Pause';
+                    });
+                    audio.addEventListener('pause', function () {
+                        playPauseBtn.textContent = 'Play';
+                    });
+                    audio.addEventListener('timeupdate', function () {
+                        const progress = (audio.currentTime / audio.duration) * 100;
+                        progressBar.style.width = progress + '%';
+                        time.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
+                    });
+                    audio.addEventListener('ended', function () {
+                        playPauseBtn.textContent = 'Play';
+                        progressBar.style.width = '0%';
+                        time.textContent = `0:00 / ${formatTime(audio.duration)}`;
+                    });
+                    audioPlayer.querySelector('.audio-progress').addEventListener('click', function (e) {
+                        const rect = this.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const width = rect.width;
+                        const seekTime = (clickX / width) * audio.duration;
+                        audio.currentTime = seekTime;
+                    });
+                }
+
+                if (audio.paused) {
+                    audio.play();
+                } else {
+                    audio.pause();
+                }
+            }
+
+            function playWordAudio(sentenceId, wordId) {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                const audio = new Audio(`${API_BASE_URL}/audio/${currentOutputDir}/words/${sentenceId}/${wordId}`);
+                currentAudio = audio;
+                audio.play();
+            }
+            function formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    errorMessage.style.display = 'none';
+                }, 5000);
+            }
+            function showSuccess(message) {
+                successMessage.textContent = message;
+                successMessage.style.display = 'block';
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                }, 5000);
+            }
+            // Get processed files list
+            function getProcessedFiles() {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', `${API_BASE_URL}/processed-files`, true);
+                xhr.onload = function () {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            displayProcessedFiles(response.processed_files);
+                        } catch (e) {
+                            showError('Failed to parse processed files list.');
+                        }
+                    } else {
+                        showError('Failed to fetch processed files list.');
+                    }
+                };
+                xhr.onerror = function () {
+                    showError('Network error while fetching processed files list.');
+                };
+                xhr.send();
+            }
+            // Display processed files list
+            function displayProcessedFiles(files) {
+                processedFilesList.innerHTML = '';
+                if (files.length === 0) {
+                    processedFilesList.innerHTML = '<li>No processed files found.</li>';
+                    return;
+                }
+                files.forEach(file => {
+                    const li = document.createElement('li');
+                    li.textContent = `File: ${file.folder_name} (Processed on: ${file.timestamp})`;
+                    li.dataset.timestamp = file.timestamp;
+                    // Add delete button
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        deleteProcessedFile(file.timestamp);
+                    });
+                    li.appendChild(deleteBtn);
+                    li.addEventListener('click', function () {
+                        loadProcessedFile(file.timestamp);
+                    });
+                    processedFilesList.appendChild(li);
+                });
+            }
+            // Load processed file
+            function loadProcessedFile(timestamp) {
+                currentOutputDir = timestamp;
+                // 重置原始音频对象
+                if (originalAudio) {
+                    originalAudio.pause();
+                    originalAudio = null;
+                    playPauseOriginalAudioBtn.textContent = 'Play';
+                    originalAudioProgressBar.style.width = '0%';
+                    originalAudioTime.textContent = '0:00 / 0:00';
+                }
+                getResults(timestamp);
+            }
+            // Delete processed file
+            function deleteProcessedFile(timestamp) {
+                if (confirm("Are you sure you want to delete this file? This action cannot be undone.")) {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('DELETE', `${API_BASE_URL}/delete-processed-file/${timestamp}`, true);
+                    xhr.onload = function () {
+                        if (xhr.status === 200) {
+                            showSuccess('File deleted successfully.');
+                            getProcessedFiles(); // Refresh list
+                        } else {
+                            showError('Failed to delete file.');
+                        }
+                    };
+                    xhr.onerror = function () {
+                        showError('Network error while deleting file.');
+                    };
+                    xhr.send();
+                }
+            }
+            // Clear temp cache
+            clearTempBtn.addEventListener('click', function () {
+                if (confirm("Are you sure you want to clear the temp cache? This action cannot be undone.")) {
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('DELETE', `${API_BASE_URL}/clear-temp`, true);
+                    xhr.onload = function () {
+                        if (xhr.status === 200) {
+                            showSuccess('Temp cache cleared successfully.');
+                        } else {
+                            showError('Failed to clear temp cache.');
+                        }
+                    };
+                    xhr.onerror = function () {
+                        showError('Network error while clearing temp cache.');
+                    };
+                    xhr.send();
+                }
+            });
+            // Initialize
+            getProcessedFiles();
+        });
+    </script>
+</body>
+
+</html>
